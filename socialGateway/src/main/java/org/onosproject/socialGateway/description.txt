@@ -1,0 +1,49 @@
+Design goals:
+
+Overall description:
+
+Application will handle
+1. DNS
+2. ARP
+3. Address translation
+
+
+DNS:
+
+Sending side:
+will act as intermediary agent forwarding the dns request to the respective peer. On receiving the response will map the
+target address to a address in the local context. Will modify the DNS response to contain the modified address in the
+reply sent back to the client.
+
+target_address -> local_address
+local_address -> target_address
+
+Receiving side:
+Upon receiving the request, should check if the intended device is online and the requesting peer has permission to access
+the device. If so reply back with the IP address of the device.
+
+ARP:
+
+Sending side:
+Before sending the DNS response back to the client, will have to program the responsibility to reply to the ARP requests
+to the mapped address.
+
+Receiving side:
+NA
+
+Address translation:
+
+Sending side:
+Install a flow to translate on left-ingress
+dst_addr(local_address) to dst_addr(target_address) and send it out the right port.
+
+Install a flow to translate on right ingress
+src_addr(target_address) to dst_addr(local_address)
+
+Receiving side:
+On receiving a packet from a port on right ingress port map src_address to some address in local domain, rewrite the src
+address in IP header, maybe redo the mac dest and send the packet out the correct egress port.
+
+Specifications:
+
+Interfaces:

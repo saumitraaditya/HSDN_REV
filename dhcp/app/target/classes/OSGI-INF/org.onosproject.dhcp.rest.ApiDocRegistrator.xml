@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" immediate="true" name="org.onosproject.dhcp.rest.ApiDocRegistrator" activate="activate" deactivate="deactivate">
+    <reference name="service" interface="org.onosproject.rest.ApiDocService" cardinality="1..1" policy="static" bind="bindService" unbind="unbindService"/>
+    <implementation class="org.onosproject.dhcp.rest.ApiDocRegistrator"/>
+</scr:component>

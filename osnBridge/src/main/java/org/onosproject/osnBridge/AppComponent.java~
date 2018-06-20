@@ -1,0 +1,104 @@
+/*
+ * Copyright 2017-present Open Networking Laboratory
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.onosproject.ovswitch_tunnel;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Service;
+import org.apache.felix.scr.annotations.Activate;
+import org.apache.felix.scr.annotations.Deactivate;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.apache.felix.scr.annotations.Reference;
+import org.onlab.packet.IP;
+import org.onlab.packet.IpAddress;
+import org.onlab.packet.TpPort;
+import org.onlab.util.ItemNotFoundException;
+import org.onosproject.cluster.ClusterService;
+import org.onosproject.core.ApplicationId;
+import org.onosproject.core.CoreService;
+import org.onosproject.net.Device;
+import org.onosproject.net.DeviceId;
+import org.onosproject.net.behaviour.*;
+import org.onosproject.net.config.*;
+import org.onosproject.net.config.basics.SubjectFactories;
+import org.onosproject.net.device.DeviceAdminService;
+import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.driver.DriverHandler;
+import org.onosproject.net.driver.DriverService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import java.util.concurrent.ExecutorService;
+import java.util.Optional;
+import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.onlab.util.Tools.isNullOrEmpty;
+import static org.onosproject.ovswitch_tunnel.OvsdbNodeConfig.OvsdbNode;
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static org.onlab.util.Tools.groupedThreads;
+/**
+ * Skeletal ONOS application component.
+ */
+@Component(immediate = true)
+@Service
+public class AppComponent {
+
+    private final Logger log = LoggerFactory.getLogger(getClass());
+    private ApplicationId appId;
+    private static final int DPID_BEGIN = 4;
+    private static final int OFPORT = 6653;
+
+
+    @Reference(cardinality=ReferenceCardinality.MANDATORY_UNARY)
+    protected CoreService coreService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected NetworkConfigRegistry configRegistry;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected NetworkConfigService configService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected OvsdbController ovsdbController;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DriverService driverService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceAdminService adminService;
+
+    @Activate
+    public void activate() {
+        
+    }
+
+    @Deactivate
+    public void deactivate() {
+        
+    }
+    
+
+
+}

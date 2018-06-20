@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2016-present Open Networking Laboratory
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<app name="org.onosproject.osnBridge" origin="sam, Inc." version="${project.version}"
+     category="OSN Communication" url="http://onosproject.org" title="osnBridge"
+     featuresRepo="mvn:${project.groupId}/${project.artifactId}/${project.version}/xml/features"
+     features="${project.artifactId}">
+    <description>${project.description}</description>
+    <artifact>mvn:${project.groupId}/${project.artifactId}/${project.version}</artifact>
+    <!--
+    <artifact>mvn:${project.groupId}/xmpp_app/${project.version}</artifact>
+    <artifact>mvn:org.igniterealtime.smack/smack-java7/4.2.1</artifact>
+    <artifact>mvn:org.igniterealtime.smack/smack-tcp/4.2.1</artifact>
+    <artifact>mvn:org.igniterealtime.smack/smack-core/4.2.1</artifact>
+    <artifact>mvn:org.igniterealtime.smack/smack-resolver-javax/4.2.1</artifact>
+    <artifact>mvn:org.igniterealtime.smack/smack-sasl-javax/4.2.1</artifact>
+    <artifact>mvn:org.igniterealtime.smack/smack-im/4.2.1</artifact>
+    <artifact>mvn:org.igniterealtime.smack/smack-extensions/4.2.1</artifact>
+    <artifact>mvn:org.jxmpp/jxmpp-core/0.5.0</artifact>
+    <artifact>mvn:org.jxmpp/jxmpp-jid/0.5.0</artifact>
+    <artifact>mvn:org.jxmpp/jxmpp-util-cache/0.5.0</artifact>
+    <artifact>mvn:xpp3/xpp3/1.1.4c</artifact>
+    <artifact>mvn:junit/junit/3.8.1</artifact>-->
+</app>

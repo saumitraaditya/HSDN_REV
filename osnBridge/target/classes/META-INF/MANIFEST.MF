@@ -1,0 +1,37 @@
+Manifest-Version: 1.0
+Bnd-LastModified: 1529254687921
+Build-Jdk: 1.8.0_171
+Built-By: sdn
+Bundle-ClassPath: WEB-INF/classes
+Bundle-Description: app handles osn communication
+Bundle-ManifestVersion: 2
+Bundle-Name: osnBridge
+Bundle-SymbolicName: org.onosproject.osnBridge
+Bundle-Version: 1.0.0.SNAPSHOT
+Created-By: Apache Maven Bundle Plugin
+Export-Package: org.onosproject.osnBridge;uses:="org.jivesoftware.smack.
+ packet,org.jivesoftware.smack.provider,org.onosproject.core,org.onospro
+ ject.net.config,org.onosproject.socialGateway";version="1.0.0",org.onos
+ project.osnBridge.rest;uses:="javax.ws.rs,javax.ws.rs.core,org.onlab.re
+ st,org.onosproject.rest";version="1.0.0"
+Import-Package: com.fasterxml.jackson.databind;version="[2.8,3)",com.fas
+ terxml.jackson.databind.node;version="[2.8,3)",com.google.common.collec
+ t;version="[22.0,23)",javax.ws.rs;version="[2.0,3)",javax.ws.rs.core;ve
+ rsion="[2.0,3)",org.jivesoftware.smack;version="[4.2,5)",org.jivesoftwa
+ re.smack.chat2;version="[4.2,5)",org.jivesoftware.smack.filter;version=
+ "[4.2,5)",org.jivesoftware.smack.packet;version="[4.2,5)",org.jivesoftw
+ are.smack.provider;version="[4.2,5)",org.jivesoftware.smack.tcp;version
+ ="[4.2,5)",org.jivesoftware.smack.util;version="[4.2,5)",org.jxmpp.jid;
+ version="[0.5,1)",org.jxmpp.jid.impl;version="[0.5,1)",org.onlab.packet
+ ;version="[1.11,2)",org.onlab.rest;version="[1.11,2)",org.onlab.util;ve
+ rsion="[1.11,2)",org.onosproject.core;version="[1.11,2)",org.onosprojec
+ t.event;version="[1.11,2)",org.onosproject.net.config;version="[1.11,2)
+ ",org.onosproject.net.config.basics;version="[1.11,2)",org.onosproject.
+ rest;version="[1.11,2)",org.onosproject.socialGateway;version="[1.0,2)"
+ ,org.slf4j;version="[1.7,2)",org.glassfish.jersey.servlet;version="[2.2
+ 5,3)"
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=1.8))"
+Service-Component: OSGI-INF/org.onosproject.osnBridge.osnBridgeManager.x
+ ml
+Tool: Bnd-3.0.0.201509101326
+Web-ContextPath: /onos/osnBridge

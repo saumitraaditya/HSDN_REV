@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/target" isTestSource="false" />
+
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="core_api" scope="COMPILE"  />
+    <orderEntry type="module" module-name="lib" scope="COMPILE"  />
+    <orderEntry type="module" module-name="utils_junit" scope="TEST"  />
+    <orderEntry type="module" module-name="utils_misc" scope="COMPILE"  />
+    <orderEntry type="module" module-name="utils_osgi" scope="COMPILE"  />
+    <orderEntry type="library" name="library_lib_asm" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_commons_collections" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_commons_configuration" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_commons_io" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_commons_lang" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_commons_lang3" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_commons_logging" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_commons_pool" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_easymock" scope="TEST" level="project"  />
+    <orderEntry type="library" name="library_lib_guava" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_guava_testlib" scope="TEST" level="project"  />
+    <orderEntry type="library" name="library_lib_hamcrest_all" scope="TEST" level="project"  />
+    <orderEntry type="library" name="library_lib_jackson_annotations" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_jackson_core" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_jackson_databind" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_joda_time" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_jsr305" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_junit" scope="TEST" level="project"  />
+    <orderEntry type="library" name="library_lib_kryo" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_metrics_core" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_metrics_json" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_minimal_json" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_minlog" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_netty" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_netty_buffer" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_netty_common" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_objenesis" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_onos_yang_compiler_api" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_onos_yang_datamodel" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_onos_yang_maven_plugin" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_onos_yang_model" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_onos_yang_serializers_json" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_onos_yang_serializers_utils" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_onos_yang_serializers_xml" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_onos_yang_utils_generator" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_org_apache_felix_scr" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_org_apache_felix_scr_annotations" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_org_apache_karaf_features_core" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_org_apache_karaf_system_core" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_org_apache_servicemix_bundles_dom4j" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_org_osgi_compendium" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_osgi_core" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_reflectasm" scope="COMPILE" level="project"  />
+    <orderEntry type="library" name="library_lib_slf4j_api" scope="COMPILE" level="project"  />
+
+  </component>
+</module>

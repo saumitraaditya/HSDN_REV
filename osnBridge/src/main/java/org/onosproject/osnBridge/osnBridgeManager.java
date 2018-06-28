@@ -296,8 +296,8 @@ public class osnBridgeManager implements osnBridgeService{
                     mapped_addr = GatewayService.find_free_address().toString();
                     mapped_names.put(query, mapped_addr);
                 }
-                String sender_gw = orig_sender.split("@")[0];
-                GatewayService.populate_arped_addresseses(mapped_addr,sender_gw);
+                String peerGWID = orig_sender.split("@")[0];
+                GatewayService.populate_arped_addresseses(mapped_addr,peerGWID);
                 GatewayService.translate_address(mapped_addr,remote_addr,false);
                 GatewayService.translate_address(remote_addr,mapped_addr,true);
                 String target = tag_sender.get(tag);
@@ -305,8 +305,8 @@ public class osnBridgeManager implements osnBridgeService{
                 break;
             case "NAME_RESP":
                 String sendto = tag_sender.get(tag);
-                sender_gw = sendto.split("@")[0];
-                GatewayService.allow_access(sender_gw,response);
+                peerGWID = sendto.split("@")[0];
+                GatewayService.allow_access(peerGWID,response);
                 GatewayService.initiate_arp_requests(response);
                 send(sendto,"RESP_IC",query,response,tag);
                 break;

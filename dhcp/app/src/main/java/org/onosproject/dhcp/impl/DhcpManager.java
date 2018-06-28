@@ -306,6 +306,11 @@ public class DhcpManager implements DhcpService {
 
     @Override
     public PortNumber getPortOnSwitch(MacAddress hostMac, DeviceId switchId){
+        if (hostMac == null)
+        {
+            log.info("Host mac passed is NULL");
+            return null;
+        }
         List<Pair<DeviceId, PortNumber>> L = knownLocation.get(hostMac);
         if (L == null){
             log.info(String.format("DHCP never heard from host with MAC %s",

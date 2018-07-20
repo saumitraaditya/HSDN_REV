@@ -169,7 +169,7 @@ public class gatewayManager implements gatewayService{
                 Ip4Address sendersIP = Ip4Address.valueOf(b2);
                 senderMac = MacAddress.valueOf(arp.getSenderHardwareAddress());
                 if (!gatewaySwitch.ip4_to_MacAndPort.containsKey(sendersIP))
-                    gatewaySwitch.ip4_to_MacAndPort.put(sendersIP, new LinkedList<MacAndPort>());
+                    gatewaySwitch.ip4_to_MacAndPort.put(sendersIP, new HashSet<MacAndPort>());
                 gatewaySwitch.ip4_to_MacAndPort.get(sendersIP).add(new MacAndPort(senderMac,incoming_port,true));
                 //log.info(pc.inPacket().parsed().getDestinationMACAddress().toString());
                 /*Here I have to make sure that ARP responses point to the master switch
@@ -196,7 +196,7 @@ public class gatewayManager implements gatewayService{
 //                        senderMac.toString(),incoming_port.toString(), src_add.toString(), gatewaySwitchId.toString() ));
                 // switches do not change MAC addresses only routers do.
                 if (!gatewaySwitch.ip4_to_MacAndPort.containsKey(src_add))
-                    gatewaySwitch.ip4_to_MacAndPort.put(src_add, new LinkedList<MacAndPort>());
+                    gatewaySwitch.ip4_to_MacAndPort.put(src_add, new HashSet<MacAndPort>());
                 gatewaySwitch.ip4_to_MacAndPort.get(src_add).add(new MacAndPort(senderMac,incoming_port,true));
                 //log.info(src_add.toString());
                 //log.info(IpAddress.valueOf(ipv4.getSourceAddress()).toString());
@@ -238,28 +238,32 @@ public class gatewayManager implements gatewayService{
                         mapped_src = find_free_address();
                         log.info(String.format("Mapped %s to %s",src_add, mapped_src));
                         //TODO- clash will happen below.
-                        if (!gatewaySwitch.ip4_to_MacAndPort.containsKey(mapped_src))
-                            gatewaySwitch.ip4_to_MacAndPort.put(mapped_src, new LinkedList<MacAndPort>());
-                        gatewaySwitch.ip4_to_MacAndPort.get(mapped_src).add(new MacAndPort(senderMac,incoming_port,false));
                     } else
                         mapped_src = rem_mapped.get(src_add);
                     rem_mapped.putIfAbsent(src_add,mapped_src);
                     mapped_rem.putIfAbsent(mapped_src,src_add);
+                    if (!gatewaySwitch.ip4_to_MacAndPort.containsKey(mapped_src))
+                        gatewaySwitch.ip4_to_MacAndPort.put(mapped_src, new HashSet<MacAndPort>());
+                    gatewaySwitch.ip4_to_MacAndPort.get(mapped_src).add(new MacAndPort(senderMac,incoming_port,false));
                     populate_arped_candidates(mapped_src);
                 }
                 MacAddress dst_mac = null;
                 PortNumber dst_port = null;
-                List<MacAndPort> MacAndPorts = gatewaySwitch.ip4_to_MacAndPort.containsKey(dst_add)
+                Set<MacAndPort> MacAndPorts = gatewaySwitch.ip4_to_MacAndPort.containsKey(dst_add)
                         ?gatewaySwitch.ip4_to_MacAndPort.get(dst_add)
                         :null;
                 if (MacAndPorts == null || MacAndPorts.size() == 0){
                     dst_mac =  dhcpService.getMacAddress(dst_add);
                     dst_port = dhcpService.getPortOnSwitch(dst_mac,gatewaySwitchId);
-                    MacAndPorts = new LinkedList<>();
+                    MacAndPorts = new HashSet<>();
                     MacAndPorts.add(new MacAndPort(dst_mac,dst_port,false));
                 } else{
-                    dst_mac = MacAndPorts.get(0).MAC; //Dst MAC of device will be same.
-                    dst_port = MacAndPorts.get(0).PORT;
+                    Iterator<MacAndPort> itr= MacAndPorts.iterator();
+                    if (itr.hasNext()) {
+                        MacAndPort MP = itr.next();
+                        dst_mac = MP.MAC; //Dst MAC of device will be same.
+                        dst_port = MP.PORT;
+                    }
                 }
 
                 if (dst_mac == null)
@@ -332,7 +336,7 @@ public class gatewayManager implements gatewayService{
                             dst_mac.toString(), dst_port.toString()));
                 }
                 /* Prevent Broadcast traffic */
-                else if (gatewaySwitch.clo_port.containsKey(incoming_port)) {
+                if (gatewaySwitch.clo_port.containsKey(incoming_port)) {
                     TrafficSelector selector = DefaultTrafficSelector.builder()
                             .matchEthType(Ethernet.TYPE_IPV4)
                             .matchIPSrc(IpPrefix.valueOf("255.255.255.255" + "/32"))
@@ -368,6 +372,25 @@ public class gatewayManager implements gatewayService{
         public MacAndPort(MacAddress mac,PortNumber port, Boolean arp) {
             MAC = mac; PORT = port; ARP = arp;
         }
+
+        @Override
+        public boolean equals(Object o){
+            if (o == this)
+                return true;
+            else if (!(o instanceof MacAndPort))
+                return false;
+            else if (((MacAndPort) o).MAC.equals(this.MAC) && ((MacAndPort) o).PORT.equals(this.PORT))
+                return true;
+            else
+                return false;
+        }
+
+        @Override
+        public int hashCode(){
+            int hc_mac = this.MAC==null?0:this.MAC.hashCode();
+            int hc_port = this.PORT==null?0:this.PORT.hashCode();
+            return hc_mac*19+hc_port*13;
+        }
     }
 
     private class GatewaySwitch
@@ -378,7 +401,7 @@ public class gatewayManager implements gatewayService{
         }
         String switchID;
         Ip4Address ipAddress;
-        public Map<Ip4Address, List<MacAndPort>> ip4_to_MacAndPort = Maps.newConcurrentMap();
+        public Map<Ip4Address, Set<MacAndPort>> ip4_to_MacAndPort = Maps.newConcurrentMap();
         public Map<String, MacAndPort> face_to_MacAndPort = Maps.newConcurrentMap();
         private Map<Ip4Address,List<PortNumber>> access_map = Maps.newConcurrentMap(); //contains access rules
         public Map<PortNumber,Boolean> clo_port = Maps.newConcurrentMap(); //if true this port feeds into a clo tunnel.
@@ -393,6 +416,8 @@ public class gatewayManager implements gatewayService{
         if (!master_new.equals(masterSwitchId)){
             //New switch will be gateway switch, need to flush all the rules, start from a clean slate.
             refreshFlows(master_new);
+            //also refresh the old master
+            refreshFlows(masterSwitchId);
             log.info(String.format("Master changed from %s to %s",
                     masterSwitchId, master_new));
         }
@@ -520,13 +545,25 @@ public class gatewayManager implements gatewayService{
                     if (gs.clo_port.containsKey(portNum))
                         gs.clo_port.remove(portNum);
                     break;
+                    /**
+                     * if the devices disconnects and connects back it appears with a new device ID,
+                     * the ports on the device are not ADDED rather UPDATED
+                     * */
                 case PORT_UPDATED:
                     portName = event.port().annotations().value("portName");
                     portMac = event.port().annotations().value("portMac");
                     portNum = event.port().number();
+                    peerGwID = portName.split("@")[0];
                     log.info(event.subject().toString());
                     log.info(String.format("PORT UPDATED %s, %s at %s",
                             portMac, portName, gatewaySwitchId.toString()));
+                    if (!gatewaySwitchMap.get(gatewaySwitchId.toString()).PeerNameToFaceNames.containsKey(peerGwID)){
+                        gatewaySwitchMap.get(gatewaySwitchId.toString()).PeerNameToFaceNames
+                                .put(peerGwID, new LinkedList<String>());
+                    }
+                    gatewaySwitchMap.get(gatewaySwitchId.toString()).PeerNameToFaceNames
+                            .get(peerGwID)
+                            .add(portName);
                     gatewaySwitchMap.get(gatewaySwitchId.toString()).face_to_MacAndPort.put(portName,
                             new MacAndPort(MacAddress.valueOf(portMac),portNum,false));
                     break;
@@ -611,7 +648,7 @@ public class gatewayManager implements gatewayService{
                     continue;
                 }
                 if (!gs.ip4_to_MacAndPort.containsKey(Ip4Address.valueOf(address)))
-                    gs.ip4_to_MacAndPort.put(Ip4Address.valueOf(address), new LinkedList<MacAndPort>());
+                    gs.ip4_to_MacAndPort.put(Ip4Address.valueOf(address), new HashSet<MacAndPort>());
                 gs.ip4_to_MacAndPort.get(Ip4Address.valueOf(address)).add(new MacAndPort(mac, port, false));
                 /* TODO clear out the map*/
                 // keep track of clo ports.

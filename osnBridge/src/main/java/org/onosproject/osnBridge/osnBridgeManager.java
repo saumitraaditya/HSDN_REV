@@ -95,6 +95,7 @@ public class osnBridgeManager implements osnBridgeService{
     private static final int DPID_BEGIN = 4;
     private static final int OFPORT = 6653;
     protected Map<String, String> tag_sender = Maps.newConcurrentMap();
+    protected Map<String, String> dns_path = Maps.newConcurrentMap();
 
     XMPPTCPConnectionConfiguration config;
     AbstractXMPPConnection conn;
@@ -208,12 +209,12 @@ public class osnBridgeManager implements osnBridgeService{
         eventExecutor.shutdown();
     }
 
-    public void send(String to, String setup, String query, String response, String tag)
+    public void send(String to, String setup, String query, String response, String tag, String res_path, String hop_no)
     {
         Message message = new Message();
         message.setType(Message.Type.chat);
         DNS_Extension dns_extension = new DNS_Extension();
-        dns_extension.set_interfaces(setup,query,response,tag);
+        dns_extension.set_interfaces(setup,query,response,tag,res_path, hop_no);
         message.addExtension(dns_extension);
         ChatManager chatManager = ChatManager.getInstanceFor(conn);
         try {
@@ -245,37 +246,51 @@ public class osnBridgeManager implements osnBridgeService{
 
     }
 
-    public void handle(DNS_Extension dns_extension, String orig_sender)
+    public void handle(DNS_Extension dns_extension, String sender)
     {
         String setup = dns_extension.get_setup();
         String query = dns_extension.get_query();
-        String admin = query.split("\\.")[1];
+        String target_recipient = query.split("\\.")[1];
         String tag = dns_extension.get_tag();
         String response = dns_extension.get_resp();
+        String resPath = dns_extension.get_res_path();
+        String hop = dns_extension.get_hop_count();
 
         switch(setup)
         {
             case "QUERY":
-                tag_sender.putIfAbsent(tag,orig_sender);
-                //send(orig_sender,"RESP",query,"127.0.0.1",tag);
-                send(admin+"@"+this.socialInfo.CLOSocialServer,"QUERY_IC",query,response,tag);
+                tag_sender.putIfAbsent(tag,sender);
+                if (dns_path.containsKey(target_recipient)){
+                    String[] path = dns_path.get(target_recipient).split(":");
+                    String NextHopRecipient = path[Integer.parseInt(hop)+1];
+                    send(NextHopRecipient,"QUERY_IC",query,response,tag
+                    ,dns_path.get(target_recipient),String.valueOf(Integer.parseInt(hop)+1));
+                }
                 break;
             case "RESP":
                 break;
             case "QUERY_IC":
                 /* need to do a name query to check availability and to get back IP address of the device*/
-                tag_sender.putIfAbsent(tag,orig_sender);
+                tag_sender.putIfAbsent(tag,sender);
                 /*
                 not going to use dname to route queries, in new design only one inner social id for all devices
                 String dname = query.split("\\.")[0];
                 */
-                send(this.socialInfo.PLOSocialId,"NAME_QUERY",query,response,tag);
-                //GatewayService.allow_access(4,"10.10.10.100"); // hardcoded for now.
-                //send(orig_sender,"RESP_IC",query,"10.10.10.100",tag);
+                if (target_recipient.equals(this.socialInfo.CLOSocialId)){
+                    send(this.socialInfo.PLOSocialId,"NAME_QUERY",query,response,tag,
+                            resPath, hop);
+                } else{
+                    String []path = dns_path.get(target_recipient).split(":");
+                    String NextHopRecipient = path[Integer.parseInt(hop)+1];
+                    send(NextHopRecipient,"QUERY_IC",query,response,tag
+                            ,dns_path.get(target_recipient),String.valueOf(Integer.parseInt(hop)+1));
+                }
                 break;
             case "RESP_IC":
+                String NextHop = tag_sender.get(tag);
                 String mapped_addr;
                 String remote_addr = response;
+                String peerGWID = sender.split("@")[0];
                 /**
                  *  populate arp addresses will
                  *  1. make the controller respond to arp requests for the mapped addresses.
@@ -285,30 +300,40 @@ public class osnBridgeManager implements osnBridgeService{
                  */
                 if (mapped_names.containsKey(query)){
                     String cached_mapped_addr = mapped_names.get(query);
-                    if (GatewayService.get_mapped_to_remote(cached_mapped_addr).equals(remote_addr)) {
-                        mapped_addr = cached_mapped_addr;
-                    } else {
+                    mapped_addr = GatewayService.get_mapped_to_remote(cached_mapped_addr, "PLO");
+                    if (mapped_addr == null || !mapped_addr.equals(remote_addr)){
                         mapped_addr = GatewayService.find_free_address().toString();
                         mapped_names.remove(query);
                         mapped_names.put(query, mapped_addr);
+                    }else{
+                        mapped_addr = cached_mapped_addr;
                     }
                 } else{
                     mapped_addr = GatewayService.find_free_address().toString();
                     mapped_names.put(query, mapped_addr);
                 }
-                String peerGWID = orig_sender.split("@")[0];
                 GatewayService.populate_arped_addresseses(mapped_addr,peerGWID);
-                GatewayService.translate_address(mapped_addr,remote_addr,false);
-                GatewayService.translate_address(remote_addr,mapped_addr,true);
-                String target = tag_sender.get(tag);
-                send(target,"RESP",query,mapped_addr,tag);
+                GatewayService.translate_address(mapped_addr,remote_addr,false,
+                        //this.socialInfo.CLOSocialId.split("@")[0],
+                        "PLO",
+                        peerGWID);
+                GatewayService.translate_address(remote_addr,mapped_addr,true,
+                        peerGWID,
+                        //this.socialInfo.CLOSocialId.split("@")[0]);
+                        "PLO");
+
+                if (NextHop.equals(this.socialInfo.PLOSocialId))
+                    send(NextHop,"RESP",query,mapped_addr,tag,resPath,hop);
+                else
+                    send(NextHop,"RESP_IC",query,mapped_addr,tag,resPath,hop);
+
                 break;
             case "NAME_RESP":
                 String sendto = tag_sender.get(tag);
                 peerGWID = sendto.split("@")[0];
                 GatewayService.allow_access(peerGWID,response);
                 GatewayService.initiate_arp_requests(response);
-                send(sendto,"RESP_IC",query,response,tag);
+                send(sendto,"RESP_IC",query,response,tag, resPath,hop);
                 break;
         }
     }
@@ -347,7 +372,7 @@ public class osnBridgeManager implements osnBridgeService{
             public void processStanza(Stanza stanza)
             {
                 String msg = stanza.toString();
-                Jid sender = stanza.getFrom();
+                Jid sender = stanza.getFrom().asBareJid();
                 System.out.println(stanza.toXML());
                 ExtensionElement ext = stanza.getExtension(DNS_Extension.NS);
                 DNS_Extension dns_ext = (DNS_Extension) ext;

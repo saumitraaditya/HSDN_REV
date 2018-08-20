@@ -72,6 +72,8 @@ public class gatewayManager implements gatewayService{
     private Map<Ip4Address, Ip4Address> local_remote = Maps.newConcurrentMap(); //for mapping arp replies
     private Map<Ip4Address, Ip4Address> rem_mapped = Maps.newConcurrentMap(); //matches on dst address
     private Map<Ip4Address, Ip4Address> mapped_rem = Maps.newConcurrentMap(); //matches on src address
+    private Map<endpoint, endpoint> x_rem_mapped = Maps.newConcurrentMap(); //matches on dst endpoint
+    private Map<endpoint, endpoint> x_mapped_rem = Maps.newConcurrentMap(); //matches on src address
     private Map<String, GatewaySwitch> gatewaySwitchMap = Maps.newConcurrentMap();
     /**
      * Below to maps, map learnt interface names, with mac, port.
@@ -192,6 +194,7 @@ public class gatewayManager implements gatewayService{
                 IPv4 ipv4 = (IPv4) pc.inPacket().parsed().getPayload();
                 Ip4Address src_add = Ip4Address.valueOf(ipv4.getSourceAddress());
                 Ip4Address dst_add = Ip4Address.valueOf(ipv4.getDestinationAddress());
+                endpoint source_endpoint = new endpoint(src_add.toString(), gatewaySwitch.portToPeer.get(incoming_port));
 //                log.info(String.format("LEARNT/UPDATED MAC %s, PORT %s FOR %s on SWITCH %s",
 //                        senderMac.toString(),incoming_port.toString(), src_add.toString(), gatewaySwitchId.toString() ));
                 // switches do not change MAC addresses only routers do.
@@ -234,14 +237,15 @@ public class gatewayManager implements gatewayService{
                  */
                 if (access_allowed){
                     Ip4Address mapped_src = null;
-                    if (rem_mapped.get(src_add) == null) {
+                    if (x_rem_mapped.get(source_endpoint) == null) {
                         mapped_src = find_free_address();
                         log.info(String.format("Mapped %s to %s",src_add, mapped_src));
                         //TODO- clash will happen below.
                     } else
-                        mapped_src = rem_mapped.get(src_add);
-                    rem_mapped.putIfAbsent(src_add,mapped_src);
-                    mapped_rem.putIfAbsent(mapped_src,src_add);
+                        mapped_src = x_rem_mapped.get(source_endpoint).ipaddress;
+                    endpoint mapped_endpoint = new endpoint(mapped_src.toString(),"PLO");
+                    x_rem_mapped.putIfAbsent(source_endpoint,mapped_endpoint);
+                    x_mapped_rem.putIfAbsent(mapped_endpoint,source_endpoint);
                     if (!gatewaySwitch.ip4_to_MacAndPort.containsKey(mapped_src))
                         gatewaySwitch.ip4_to_MacAndPort.put(mapped_src, new HashSet<MacAndPort>());
                     gatewaySwitch.ip4_to_MacAndPort.get(mapped_src).add(new MacAndPort(senderMac,incoming_port,false));
@@ -279,16 +283,21 @@ public class gatewayManager implements gatewayService{
                         return;
                     }
                 }
-
-
-                if (mapped_rem.containsKey(dst_add)) {
+                /**
+                 * dst_endpoint specified the context of the dst ip address in the packet.
+                 * it could be
+                 * If the packet is flowing from PLO to CLO the dst address is the mapped
+                 * address in the PLO domain, which needs to be translated to remote address
+                 * **/
+                endpoint dst_endpoint = new endpoint(dst_add.toString(), gatewaySwitch.portToPeer.get(incoming_port));
+                if (x_mapped_rem.containsKey(dst_endpoint)) {
                     TrafficSelector selector = DefaultTrafficSelector.builder()
                             .matchEthType(Ethernet.TYPE_IPV4)
                             .matchIPDst(IpPrefix.valueOf(dst_add.toString()+"/32"))
                             .build();
                     TrafficTreatment.Builder trafficBuilder = DefaultTrafficTreatment.builder()
                             .setEthDst(dst_mac)
-                            .setIpDst(IpAddress.valueOf(mapped_rem.get(dst_add).toString()));
+                            .setIpDst(x_mapped_rem.get(dst_endpoint).ipaddress);
                     for (MacAndPort macAndPort:MacAndPorts){
                             trafficBuilder.setOutput(macAndPort.PORT);
                     }
@@ -305,10 +314,10 @@ public class gatewayManager implements gatewayService{
                     flowRuleService.applyFlowRules(fr);
                     log.info(String.format("Installed flow rule for MAPPED %s to REMOTE %s on %s" +
                                     "ETH_DST %s OUT_PORT %s",
-                            dst_add.toString(),mapped_rem.get(dst_add).toString(), gatewaySwitchId.toString(),
+                            dst_add.toString(),x_mapped_rem.get(dst_endpoint).ipaddress.toString(), gatewaySwitchId.toString(),
                             dst_mac.toString(), dst_port.toString()));
                 }
-                else if (rem_mapped.containsKey(src_add)) {
+                else if (x_rem_mapped.containsKey(source_endpoint)) {
                     TrafficSelector selector = DefaultTrafficSelector.builder()
                             .matchEthType(Ethernet.TYPE_IPV4)
                             //.matchEthSrc(MacAddress.valueOf("00:00:00:00:00:01"))
@@ -316,7 +325,7 @@ public class gatewayManager implements gatewayService{
                             .build();
                     TrafficTreatment.Builder trafficBuilder = DefaultTrafficTreatment.builder()
                             .setEthDst(dst_mac)
-                            .setIpSrc(IpAddress.valueOf(rem_mapped.get(src_add).toString()));
+                            .setIpSrc(x_rem_mapped.get(source_endpoint).ipaddress);
                     for (MacAndPort macAndPort:MacAndPorts){
                         trafficBuilder.setOutput(macAndPort.PORT);
                     }
@@ -332,7 +341,7 @@ public class gatewayManager implements gatewayService{
                     flowRuleService.applyFlowRules(fr);
                     log.info(String.format("Installed flow rule for REMOTE %s to MAPPED %s on %s" +
                                     "ETH_DST %s OUT_PORT %s",
-                            src_add,rem_mapped.get(src_add).toString(), gatewaySwitchId.toString(),
+                            src_add,x_rem_mapped.get(source_endpoint).ipaddress.toString(), gatewaySwitchId.toString(),
                             dst_mac.toString(), dst_port.toString()));
                 }
                 /* Prevent Broadcast traffic */
@@ -392,6 +401,36 @@ public class gatewayManager implements gatewayService{
             return hc_mac*19+hc_port*13;
         }
     }
+    /* This class combines the remote address with peer name. */
+    private class endpoint{
+        public Ip4Address ipaddress;
+        public String  peer_name;
+        public endpoint(String address, String peer){
+            ipaddress = Ip4Address.valueOf(address);
+            peer_name = peer;
+        }
+        @Override
+        public boolean equals(Object o){
+            if (o==this)
+                return true;
+            else if (!(o instanceof endpoint))
+                return false;
+            else {
+                endpoint other = (endpoint) o;
+                if (this.ipaddress.equals(other.ipaddress) && this.peer_name.equals(other.peer_name))
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+        @Override
+        public int hashCode(){
+            int t_ip = this.ipaddress==null?0:this.ipaddress.hashCode();
+            int t_peer = this.peer_name==null?0:this.peer_name.hashCode();
+            return t_ip*19+t_peer*13;
+        }
+    }
 
     private class GatewaySwitch
     {
@@ -405,6 +444,7 @@ public class gatewayManager implements gatewayService{
         public Map<String, MacAndPort> face_to_MacAndPort = Maps.newConcurrentMap();
         private Map<Ip4Address,List<PortNumber>> access_map = Maps.newConcurrentMap(); //contains access rules
         public Map<PortNumber,Boolean> clo_port = Maps.newConcurrentMap(); //if true this port feeds into a clo tunnel.
+        public Map<PortNumber, String> portToPeer = Maps.newConcurrentMap(); //maps port numbers to peer to which the tunnel connects to.
         public Map<String,List<String>> PeerNameToFaceNames = Maps.newConcurrentMap();
 
     }
@@ -530,6 +570,7 @@ public class gatewayManager implements gatewayService{
                             .add(portName);
                     gatewaySwitchMap.get(gatewaySwitchId.toString()).face_to_MacAndPort.put(portName,
                             new MacAndPort(MacAddress.valueOf(portMac),portNum,false));
+                    gatewaySwitchMap.get(gatewaySwitchId.toString()).portToPeer.putIfAbsent(portNum,peerGwID);
                     break;
                 case PORT_REMOVED:
                     portName = event.port().annotations().value("portName");
@@ -544,6 +585,7 @@ public class gatewayManager implements gatewayService{
                     gs.PeerNameToFaceNames.get(peerGwID).remove(portName);
                     if (gs.clo_port.containsKey(portNum))
                         gs.clo_port.remove(portNum);
+                    gatewaySwitchMap.get(gatewaySwitchId.toString()).portToPeer.remove(portNum);
                     break;
                     /**
                      * if the devices disconnects and connects back it appears with a new device ID,
@@ -566,6 +608,7 @@ public class gatewayManager implements gatewayService{
                             .add(portName);
                     gatewaySwitchMap.get(gatewaySwitchId.toString()).face_to_MacAndPort.put(portName,
                             new MacAndPort(MacAddress.valueOf(portMac),portNum,false));
+                    gatewaySwitchMap.get(gatewaySwitchId.toString()).portToPeer.putIfAbsent(portNum,peerGwID);
                     break;
                 default:
                     break;
@@ -670,11 +713,17 @@ public class gatewayManager implements gatewayService{
      * if incoming is true - make a remote to mapped mapping
      * if incoming is false/outgoing on CLO - make a mapped to remote mapping
      * */
-    public void translate_address(String match_address, String new_address, Boolean incoming){
-        if (incoming==false)
-            mapped_rem.putIfAbsent(Ip4Address.valueOf(match_address), Ip4Address.valueOf(new_address));
-        else
-            rem_mapped.putIfAbsent(Ip4Address.valueOf(match_address), Ip4Address.valueOf(new_address));
+    public void translate_address(String match_address, String new_address, Boolean incoming,
+                                  String match_social_id,
+                                  String new_social_id){
+        endpoint match = new endpoint(match_address, match_social_id);
+        endpoint  matched = new endpoint(new_address, new_social_id);
+        if (incoming==false) {
+            x_mapped_rem.putIfAbsent(match,matched);
+        }
+        else {
+            x_rem_mapped.putIfAbsent(match,matched);
+        }
 
     }
 
@@ -712,8 +761,10 @@ public class gatewayManager implements gatewayService{
         //log.info("Doing something ha ha ha");
     }
 
-    public String get_mapped_to_remote(String mapped_address){
-        return mapped_rem.get(Ip4Address.valueOf(mapped_address)).toString();
+    public String get_mapped_to_remote(String mapped_address, String SocialPeer){
+        endpoint q = new endpoint(mapped_address, SocialPeer);
+        endpoint t = x_mapped_rem.getOrDefault(q,null);
+        return t==null?null:t.ipaddress.toString();
     }
 
     /* Need to populate gateway switches in the system*/
@@ -743,6 +794,7 @@ public class gatewayManager implements gatewayService{
                             .add(pName);
                     gatewaySwitchMap.get(switchID.toString()).face_to_MacAndPort.put(pName,
                             new MacAndPort(pMac,pNum,false));
+                    gatewaySwitchMap.get(switchID.toString()).portToPeer.putIfAbsent(pNum,peerGwID);
                     /* TODO : ONLY FOR TESTING */
                     if (pName.startsWith("perso_")){
                         gatewaySwitch.clo_port.put(pNum,true);

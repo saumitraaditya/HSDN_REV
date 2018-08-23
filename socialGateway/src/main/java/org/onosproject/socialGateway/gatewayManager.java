@@ -289,7 +289,14 @@ public class gatewayManager implements gatewayService{
                  * If the packet is flowing from PLO to CLO the dst address is the mapped
                  * address in the PLO domain, which needs to be translated to remote address
                  * **/
-                endpoint dst_endpoint = new endpoint(dst_add.toString(), gatewaySwitch.portToPeer.get(incoming_port));
+                /**
+                 * TODO: made a change below ("PLO"):
+                 * **/
+                /**
+                 * When packets are being forwarded from one CLO to another, the if clause is activated, in some ways
+                 * it is similar to the process of handling a packet from PLO to CLO.
+                 * **/
+                endpoint dst_endpoint = new endpoint(dst_add.toString(), "PLO"/*gatewaySwitch.portToPeer.get(incoming_port)*/);
                 if (x_mapped_rem.containsKey(dst_endpoint)) {
                     TrafficSelector selector = DefaultTrafficSelector.builder()
                             .matchEthType(Ethernet.TYPE_IPV4)

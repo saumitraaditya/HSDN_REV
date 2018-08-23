@@ -176,7 +176,12 @@ public class osnBridgeManager implements osnBridgeService{
             return;
         }
         this.socialInfo = config.getConfig();
-        log.info("Loaded social coniguration is as follows:+\n"+socialInfo.displayConfig());
+        log.info("Loaded social configuration is as follows:+\n"+socialInfo.displayConfig());
+        /**
+         * TODO: Below is only for proof of concept test of dns resolution path
+         * **/
+        dns_path.putIfAbsent("perso_1","perso_0@xmpp.ipop-project.org:perso_10@xmpp.ipop-project.org:" +
+                "perso_11@xmpp.ipop-project.org:perso_1@xmpp.ipop-project.org");
         thread = new Thread(new xmpp_initializer());
         thread.start();
     }
@@ -276,19 +281,20 @@ public class osnBridgeManager implements osnBridgeService{
                 not going to use dname to route queries, in new design only one inner social id for all devices
                 String dname = query.split("\\.")[0];
                 */
-                if (target_recipient.equals(this.socialInfo.CLOSocialId)){
+                if (target_recipient.equals(this.socialInfo.CLOSocialId.split("@")[0])){
                     send(this.socialInfo.PLOSocialId,"NAME_QUERY",query,response,tag,
                             resPath, hop);
                 } else{
-                    String []path = dns_path.get(target_recipient).split(":");
+                    String []path = resPath.split(":");
                     String NextHopRecipient = path[Integer.parseInt(hop)+1];
                     send(NextHopRecipient,"QUERY_IC",query,response,tag
-                            ,dns_path.get(target_recipient),String.valueOf(Integer.parseInt(hop)+1));
+                            ,resPath,String.valueOf(Integer.parseInt(hop)+1));
                 }
                 break;
             case "RESP_IC":
                 String NextHop = tag_sender.get(tag);
                 String mapped_addr;
+                String recorded_peer_addr;
                 String remote_addr = response;
                 String peerGWID = sender.split("@")[0];
                 /**
@@ -298,10 +304,16 @@ public class osnBridgeManager implements osnBridgeService{
                  *  check if the mapped address is already in cache else allocate new addresss
                  *  TODO when to remove the entry from cache?
                  */
+
+                /**
+                 * Right now all addresses are going to get mapped to PLO
+                 * later we can refine the logic to avoid the need of mapping
+                 * addresses in nonconflicting subnets.
+                 * **/
                 if (mapped_names.containsKey(query)){
                     String cached_mapped_addr = mapped_names.get(query);
-                    mapped_addr = GatewayService.get_mapped_to_remote(cached_mapped_addr, "PLO");
-                    if (mapped_addr == null || !mapped_addr.equals(remote_addr)){
+                    recorded_peer_addr = GatewayService.get_mapped_to_remote(cached_mapped_addr, "PLO");
+                    if (recorded_peer_addr == null || !recorded_peer_addr.equals(remote_addr)){
                         mapped_addr = GatewayService.find_free_address().toString();
                         mapped_names.remove(query);
                         mapped_names.put(query, mapped_addr);
